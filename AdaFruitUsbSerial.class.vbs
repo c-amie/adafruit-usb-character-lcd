@@ -1,5 +1,8 @@
-	' AdafruitUsbSerial Application Programming Interface v1.0.3
+	' AdafruitUsbSerial Application Programming Interface v1.0.4
 	' © Chris Tilley | AmDi 1996 - 2014
+
+	' https://learn.adafruit.com/usb-plus-serial-backpack/command-reference
+	' https://learn.adafruit.com/usb-plus-serial-backpack/sending-text
 
 	' DEPENDENCIES
 	' ############
@@ -22,8 +25,11 @@ Class AdafruitUsbSerial
 	private m_SET_BLINK_ON
 	private m_SET_BLINK_OFF
 	private m_SET_RGB
+	private m_SET_CONTRAST
+	private m_SET_BRIGHTNESS
 
 	private m_iPortNumber
+	private m_byteCharacterLength
 	private m_bolDebug
 	private m_bolAutoScroll
 	private m_bolUnderlineCursor
@@ -48,8 +54,11 @@ Class AdafruitUsbSerial
 		m_SET_BLINK_ON			= chr(254) & chr(83)
 		m_SET_BLINK_OFF			= chr(254) & chr(84)
 		m_SET_RGB				= chr(254) & chr(208)
+		m_SET_CONTRAST			= chr(254) & chr(80)
+		m_SET_BRIGHTNESS		= chr(254) & chr(153)
 
 		m_iPortNumber			= 1
+		m_byteCharacterLength	= 32
 		m_bolDebug				= false
 		m_bolAutoScroll			= true
 		m_bolUnderlineCursor	= false
@@ -69,6 +78,14 @@ Class AdafruitUsbSerial
 
 	public property let PortNumber(ByRef iIn)
 		m_iPortNumber = iIn
+	end property
+
+	public property get CharacterLength
+		CharacterLength = m_byteCharacterLength
+	end property
+
+	public property let CharacterLength(ByRef byteIn)
+		m_byteCharacterLength = byteIn
 	end property
 
 	public property get Debug()
@@ -132,8 +149,13 @@ Class AdafruitUsbSerial
 	end sub
 
 	public sub changeSplashScreen(ByVal strIn)
-		strIn = Trim(strIn)
-		strIn = Left(strIn, 32)
+		strIn = Left(strIn, m_byteCharacters)
+		' Force it to be exactly 32 characters by padding
+		do while (Len(strIn) < m_byteCharacters)
+			strIn = (strIn & " ")
+		loop
+		me.clearScreen()
+		me.home()
 		me.write(m_SET_STARTUP_SPLASH)
 		me.write(strIn)
 	end sub
@@ -143,6 +165,18 @@ Class AdafruitUsbSerial
 		me.write(chr(byteR))
 		me.write(chr(byteG))
 		me.write(chr(byteB))
+	end sub
+
+	' Valid Range 0 - 255. Values between 180 and 220 are suggested
+	public sub contrast(ByRef byteIn)
+		me.write(m_SET_CONTRAST)
+		me.write(chr(byteIn))
+	end sub
+
+	' Valid Range 0 - 255.
+	public sub brightness(ByRef byteIn)
+		me.write(m_SET_BRIGHTNESS)
+		me.write(chr(byteIn))
 	end sub
 
 	public sub setCursorPosition(ByRef iX, ByRef iY)
@@ -168,6 +202,19 @@ Class AdafruitUsbSerial
 
 	public sub forward()
 		me.write(m_SET_CURSOR_FORWARD)
+	end sub
+
+	public sub goForward(ByRef iIn)
+		Dim i
+		for i = 1 to iIn
+			me.write(m_SET_CURSOR_FORWARD)
+		next
+	end sub
+
+	public sub delete()
+		me.write(m_SET_CURSOR_BACK)
+		me.write(" ")
+		me.write(m_SET_CURSOR_BACK)
 	end sub
 
 	public sub write(ByRef strIn)
